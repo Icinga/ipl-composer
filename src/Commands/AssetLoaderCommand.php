@@ -19,10 +19,11 @@ class AssetLoaderCommand extends BaseCommand
     {
         $this->setName('load-assets')
             ->setDescription('Collect and load assets from various asset directories')
+            ->addOption("force", "f", null, "Delete existing assets before loading new ones.")
             ->addOption("copy", "c", null, "Copy assets instead of creating symlinks");
     }
 
-    protected function handleCopy(string $from, string $to, bool $copy): void
+    protected function handleCopy(string $from, string $to, bool $copy, bool $force): void
     {
         if (! is_readable($from)) {
             return;
@@ -42,11 +43,16 @@ class AssetLoaderCommand extends BaseCommand
                 }
 
                 if (file_exists($targetPath)) {
-                    continue;
+                    if (! $force) {
+                        continue;
+                    }
+                    unlink($targetPath);
                 }
 
                 if ($sourcePath->isDir()) {
-                    mkdir($targetPath, static::DIR_PERMISSIONS, true);
+                    if (! file_exists($targetPath)) {
+                        mkdir($targetPath, static::DIR_PERMISSIONS, true);
+                    }
                 } elseif ($sourcePath->isFile()) {
                     if (! is_dir(dirname($targetPath))) {
                         mkdir(dirname($targetPath), static::DIR_PERMISSIONS, true);
@@ -67,7 +73,10 @@ class AssetLoaderCommand extends BaseCommand
             $targetPath = getcwd() . '/' . $to;
 
             if (file_exists($targetPath)) {
-                return;
+                if (! $force) {
+                    return;
+                }
+                unlink($targetPath);
             }
 
             if (! is_dir(dirname($targetPath))) {
@@ -82,12 +91,12 @@ class AssetLoaderCommand extends BaseCommand
         }
     }
 
-    protected function handlePackage($package, bool $copy): void
+    protected function handlePackage($package, bool $copy, bool $force): void
     {
         $name = $package->getName();
         $path = "vendor/$name/asset";
         if (is_dir($path) && is_readable($path)) {
-            $this->handleCopy($path, "asset", $copy);
+            $this->handleCopy($path, "asset", $copy, $force);
         }
 
         $extra = $package->getExtra();
@@ -97,7 +106,7 @@ class AssetLoaderCommand extends BaseCommand
 
         $special = $extra['ipl-composer']['special'] ?? [];
         foreach ($special as $sourcePath => $targetPath) {
-            $this->handleCopy($sourcePath, "asset/" . $targetPath, $copy);
+            $this->handleCopy($sourcePath, "asset/" . $targetPath, $copy, $force);
         }
     }
 
@@ -126,14 +135,15 @@ class AssetLoaderCommand extends BaseCommand
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $copy = $input->getOption('copy');
+        $force = $input->getOption('force');
 
         $composer = $this->requireComposer();
 
-        $this->handlePackage($composer->getPackage(), $copy);
+        $this->handlePackage($composer->getPackage(), $copy, $force);
 
         $localRepo = $composer->getRepositoryManager()->getLocalRepository();
         foreach ($localRepo->getPackages() as $package) {
-            $this->handlePackage($package, $copy);
+            $this->handlePackage($package, $copy, $force);
         }
 
         $this->cleanup();
