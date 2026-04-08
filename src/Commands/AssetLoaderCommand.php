@@ -36,6 +36,11 @@ class AssetLoaderCommand extends BaseCommand
             /** @var SplFileInfo $sourcePath */
             foreach ($libAssets as $sourcePath) {
                 $targetPath = getcwd() . '/' . $to . substr($sourcePath->getRealPath(), strlen(getcwd() . '/' . $from));
+
+                if ($sourcePath->getRealPath() === $targetPath) {
+                    continue;
+                }
+
                 if (file_exists($targetPath)) {
                     continue;
                 }
@@ -54,6 +59,10 @@ class AssetLoaderCommand extends BaseCommand
                 }
             }
         } else if (is_file($from)) {
+            if ($from === $to) {
+                return;
+            }
+
             $sourcePath = getcwd() . '/' . $from;
             $targetPath = getcwd() . '/' . $to;
 
