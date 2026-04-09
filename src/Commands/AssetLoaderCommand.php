@@ -46,7 +46,9 @@ class AssetLoaderCommand extends BaseCommand
                     if (! $force) {
                         continue;
                     }
-                    unlink($targetPath);
+                    if ($sourcePath->isFile()) {
+                        unlink($targetPath);
+                    }
                 }
 
                 if ($sourcePath->isDir()) {
