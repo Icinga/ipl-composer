@@ -7,22 +7,18 @@ use ipl\Composer\Service\AssetMirror;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class AssetLoaderCommand extends BaseCommand
+class AssetCommand extends BaseCommand
 {
     protected function configure(): void
     {
-        $this->setName('load-assets')
+        $this->setName('assets')
             ->setDescription('Collect and load assets from various asset directories')
             ->addOption("copy", "c", null, "Copy assets instead of creating symlinks");
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $copy = $input->getOption('copy');
-
-        $composer = $this->requireComposer();
-
-        AssetMirror::mirror($composer, $copy);
+        AssetMirror::mirror($this->requireComposer(), $input->getOption('copy'));
 
         return 0;
     }
