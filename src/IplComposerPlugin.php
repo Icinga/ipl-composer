@@ -38,20 +38,16 @@ class IplComposerPlugin implements PluginInterface, Capable, EventSubscriberInte
     public static function getSubscribedEvents(): array
     {
         return [
-            'post-install-cmd' => 'onPostInstall',
-            'post-update-cmd' => 'onPostUpdate',
+            'post-install-cmd' => 'onEvent',
+            'post-update-cmd' => 'onEvent',
         ];
     }
 
-    public function onPostInstall(Event $event): void
+    public function onEvent(Event $event): void
     {
-        $event->getIO()->write('Mirroring asset directory');
-        AssetMirror::mirror($event->getComposer());
-    }
-
-    public function onPostUpdate(Event $event): void
-    {
-        $event->getIO()->write('Mirroring asset directory');
-        AssetMirror::mirror($event->getComposer());
+        $composer = $event->getComposer();
+        $devMode = $event->isDevMode();
+        $event->getIO()->write(($devMode ? 'Linking' : 'Copying') . ' asset directory');
+        AssetMirror::mirror($composer, ! $devMode);
     }
 }
