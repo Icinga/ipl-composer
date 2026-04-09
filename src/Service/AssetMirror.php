@@ -18,19 +18,19 @@ class AssetMirror
 
     protected const TARGET_DIR_NAME = 'asset';
 
-    static public function mirror(Composer $composer, bool $copy = false, bool $force = false): void
+    static public function mirror(Composer $composer, bool $copy = false): void
     {
-        static::handlePackage($composer->getPackage(), $copy, $force);
+        static::handlePackage($composer->getPackage(), $copy);
 
         $localRepo = $composer->getRepositoryManager()->getLocalRepository();
         foreach ($localRepo->getPackages() as $package) {
-            static::handlePackage($package, $copy, $force);
+            static::handlePackage($package, $copy);
         }
 
         static::cleanup();
     }
 
-    static protected function handleCopy(string $from, string $to, bool $copy, bool $force): void
+    static protected function handleCopy(string $from, string $to, bool $copy): void
     {
         if (! is_readable($from)) {
             return;
@@ -54,9 +54,6 @@ class AssetMirror
                 }
 
                 if (file_exists($targetPath)) {
-                    if (! $force) {
-                        continue;
-                    }
                     if (is_file($targetPath)) {
                         unlink($targetPath);
                     }
@@ -83,9 +80,6 @@ class AssetMirror
             }
 
             if (file_exists($toBasePath)) {
-                if (! $force) {
-                    return;
-                }
                 unlink($toBasePath);
             }
 
@@ -101,12 +95,12 @@ class AssetMirror
         }
     }
 
-    static protected function handlePackage(PackageInterface $package, bool $copy, bool $force): void
+    static protected function handlePackage(PackageInterface $package, bool $copy): void
     {
         $name = $package->getName();
         $path = "vendor/$name/" . static::SOURCE_DIR_NAME;
         if (is_dir($path) && is_readable($path)) {
-            static::handleCopy($path, static::TARGET_DIR_NAME, $copy, $force);
+            static::handleCopy($path, static::TARGET_DIR_NAME, $copy);
         }
 
         $extra = $package->getExtra();
@@ -116,7 +110,7 @@ class AssetMirror
 
         $special = $extra['ipl-composer']['extra'] ?? [];
         foreach ($special as $sourcePath => $targetPath) {
-            static::handleCopy($sourcePath, static::TARGET_DIR_NAME . "/" . $targetPath, $copy, $force);
+            static::handleCopy($sourcePath, static::TARGET_DIR_NAME . "/" . $targetPath, $copy);
         }
     }
 
