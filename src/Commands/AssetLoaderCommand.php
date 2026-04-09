@@ -106,7 +106,7 @@ class AssetLoaderCommand extends BaseCommand
             return;
         }
 
-        $special = $extra['ipl-composer']['special'] ?? [];
+        $special = $extra['ipl-composer']['extra'] ?? [];
         foreach ($special as $sourcePath => $targetPath) {
             $this->handleCopy($sourcePath, "asset/" . $targetPath, $copy, $force);
         }
