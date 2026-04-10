@@ -4,6 +4,7 @@ namespace ipl\Composer;
 
 use Composer\Plugin\Capability\CommandProvider as CommandProviderCapability;
 use ipl\Composer\Commands\AssetCommand;
+use ipl\Composer\Commands\ReleaseCommand;
 
 class IplComposerCommandProvider implements CommandProviderCapability
 {
@@ -11,6 +12,7 @@ class IplComposerCommandProvider implements CommandProviderCapability
     {
         return [
             new AssetCommand(),
+            new ReleaseCommand(),
         ];
     }
 }
