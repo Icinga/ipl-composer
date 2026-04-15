@@ -12,7 +12,7 @@ use RuntimeException;
 
 class GitService
 {
-    protected ?Git $git = null;
+    protected Git $git;
 
     static public function isGitInstalled(): bool
     {
