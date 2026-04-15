@@ -3,6 +3,11 @@
 namespace ipl\Composer\Service;
 
 use Composer\Console\Application;
+use FilesystemIterator;
+use RecursiveCallbackFilterIterator;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -14,10 +19,16 @@ class BuildService
     ) {
     }
 
+    /**
+     * @param string[] $includeFiles
+     * @param string[] $excludeFiles
+     */
     public function release(
         string $version,
         bool $checkout,
         bool $tag,
+        array $includeFiles,
+        array $excludeFiles,
     ): bool {
         $tags = $this->git->getTags();
         if (in_array($version, $tags)) {
@@ -46,8 +57,9 @@ class BuildService
             return false;
         }
 
-        $this->git->add('vendor');
-        $this->git->add('asset/*');
+        foreach ($this->collectFilesToAdd('.', $includeFiles, $excludeFiles) as $file) {
+            $this->git->add($file);
+        }
 
         if (! file_put_contents('VERSION', "v$version")) {
             $this->output->writeln("Could not write version file", OutputInterface::VERBOSITY_NORMAL);
@@ -78,6 +90,107 @@ class BuildService
         );
 
         return true;
+    }
+
+    /**
+     * @param string[] $includeFiles
+     * @param string[] $excludeFiles
+     * @return string[]
+     */
+    private function collectFilesToAdd(string $relDir, array $includeFiles, array $excludeFiles): array
+    {
+        $toAdd = [];
+        $cwd = getcwd();
+        $absDir = $relDir === '.' ? $cwd : "$cwd/$relDir";
+
+        $filter = new RecursiveCallbackFilterIterator(
+            new RecursiveDirectoryIterator($absDir, FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS),
+            function (SplFileInfo $entry) use ($cwd, $includeFiles, $excludeFiles): bool {
+                if (str_starts_with($entry->getFilename(), '.')) {
+                    return false;
+                }
+
+                if (! $entry->isDir()) {
+                    return true;
+                }
+
+                if ($entry->isLink()) {
+                    return false;
+                }
+
+                $relPath = ltrim(substr($entry->getPathname(), strlen($cwd)), '/');
+
+                if ($this->shouldInclude("$relPath/", $includeFiles, $excludeFiles)) {
+                    return true;
+                }
+
+                foreach ($excludeFiles as $pattern) {
+                    if ($this->matchesPattern("$relPath/", $pattern)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+        );
+
+        /** @var SplFileInfo $entry */
+        foreach (new RecursiveIteratorIterator($filter, RecursiveIteratorIterator::LEAVES_ONLY) as $entry) {
+            $relPath = ltrim(substr($entry->getPathname(), strlen($cwd)), '/');
+            if ($this->shouldInclude($relPath, $includeFiles, $excludeFiles)) {
+                $toAdd[] = $relPath;
+            }
+        }
+
+        return $toAdd;
+    }
+
+    /**
+     * @param string[] $includeFiles
+     * @param string[] $excludeFiles
+     */
+    public function shouldInclude(string $path, array $includeFiles, array $excludeFiles): bool
+    {
+        $included = false;
+        foreach ($includeFiles as $pattern) {
+            if ($this->matchesPattern($path, $pattern)) {
+                $included = true;
+                break;
+            }
+        }
+
+        if (! $included) {
+            return false;
+        }
+
+        foreach ($excludeFiles as $pattern) {
+            if ($this->matchesPattern($path, $pattern)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function matchesPattern(string $path, string $pattern): bool
+    {
+        if (str_ends_with($pattern, '/')) {
+            $dir = ltrim($pattern, '/');
+            if (str_starts_with($pattern, '/')) {
+                return $path === rtrim($dir, '/') || str_starts_with($path, $dir);
+            }
+            return str_contains('/' . $path . '/', '/' . $dir);
+        }
+
+        if (str_starts_with($pattern, '/')) {
+            return fnmatch(ltrim($pattern, '/'), $path);
+        }
+
+        if (! str_contains($pattern, '/')) {
+            return fnmatch($pattern, basename($path));
+        }
+
+        return fnmatch($pattern, $path);
     }
 
     protected function composerValidate(): bool
