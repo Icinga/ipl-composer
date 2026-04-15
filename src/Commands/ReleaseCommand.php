@@ -4,6 +4,7 @@ namespace ipl\Composer\Commands;
 
 use Composer\Command\BaseCommand;
 use ipl\Composer\Service\BuildService;
+use ipl\Composer\Service\ComposerService;
 use ipl\Composer\Service\GitService;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -33,8 +34,10 @@ class ReleaseCommand extends BaseCommand
 
         $git = new GitService($this->getIO(), $this->requireComposer()->getConfig());
 
+        $composerService = new ComposerService($this->requireComposer(), $output);
         $build = new BuildService(
             $git,
+            $composerService,
             $output,
         );
 

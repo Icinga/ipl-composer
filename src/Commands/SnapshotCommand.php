@@ -4,6 +4,7 @@ namespace ipl\Composer\Commands;
 
 use Composer\Command\BaseCommand;
 use ipl\Composer\Service\BuildService;
+use ipl\Composer\Service\ComposerService;
 use ipl\Composer\Service\GitService;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -59,25 +60,44 @@ class SnapshotCommand extends BaseCommand
         $git->deleteBranch($branch);
         $git->createBranchAndSwitch($branch);
 
-        $git->merge($latestTag, 'Merge latest tag, package pipelines require it');
+        $git->merge($latestTag, "Merge latest tag: $latestTag");
 
         $git->restore('composer.json', true, true);
         $git->restore('composer.lock', true, true);
+
+        $composerService = new ComposerService($this->requireComposer(), $output);
+
+        $extra = $this->requireComposer()->getPackage()->getExtra()['ipl/composer'] ?? [];
+        $repoints = $extra['snapshot']['repoint'] ?? [];
+        if (! empty($repoints)) {
+            $composerService->run(['config', 'minimum-stability', 'dev']);
+            $composerService->run(['config', 'prefer-stable', 'true']);
+
+            $repointStrings = ["'php:>=" . PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION . "'"];
+
+            $repointPackages = $composerService->getRepointPackages($repoints);
+            foreach ($repointPackages as $name => $version) {
+                $repointStrings[] = "'$name:$version'";
+            }
+
+            // TODO: Should we also do a separate --no-dev install?
+            $composerService->run(array_merge(['require'], $repointStrings));
+        }
 
         $git->commit(noEdit: true);
 
         $build = new BuildService(
             $git,
+            $composerService,
             $output,
         );
 
-        $extra = $this->requireComposer()->getPackage()->getExtra()['ipl/composer']['release'] ?? [];
         return $build->release(
             $nextVersion,
             false,
             true,
-            $extra['include'] ?? [],
-            $extra['exclude'] ?? [],
+            $extra['release']['include'] ?? [],
+            $extra['release']['exclude'] ?? [],
         );
     }
 }

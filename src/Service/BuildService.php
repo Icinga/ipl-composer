@@ -2,19 +2,18 @@
 
 namespace ipl\Composer\Service;
 
-use Composer\Console\Application;
 use FilesystemIterator;
 use RecursiveCallbackFilterIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
-use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class BuildService
 {
     public function __construct(
         protected ?GitService $git,
+        protected ComposerService $composerService,
         protected OutputInterface $output,
     ) {
     }
@@ -36,7 +35,7 @@ class BuildService
             return false;
         }
 
-        if(! $this->composerValidate()) {
+        if ($this->composerService->run(['validate', '--no-check-all', '--strict']) !== 0) {
             $this->output->writeln("Composer validate failed", OutputInterface::VERBOSITY_NORMAL);
             return false;
         }
@@ -191,16 +190,5 @@ class BuildService
         }
 
         return fnmatch($pattern, $path);
-    }
-
-    protected function composerValidate(): bool
-    {
-        $application = new Application();
-        $application->setAutoExit(false);
-
-        $in = new ArrayInput(['command' => 'validate', '--no-check-all' => true, '--strict' => true]);
-        $code = $application->run($in, $this->output);
-
-        return $code === 0;
     }
 }
