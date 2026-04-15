@@ -71,6 +71,13 @@ class SnapshotCommand extends BaseCommand
             $output,
         );
 
-        return $build->release($nextVersion, false, true);
+        $extra = $this->requireComposer()->getPackage()->getExtra()['ipl/composer']['release'] ?? [];
+        return $build->release(
+            $nextVersion,
+            false,
+            true,
+            $extra['include'] ?? [],
+            $extra['exclude'] ?? [],
+        );
     }
 }
