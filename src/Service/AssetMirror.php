@@ -104,11 +104,11 @@ class AssetMirror
         }
 
         $extra = $package->getExtra();
-        if (empty($extra) || empty($extra['ipl-composer'])) {
+        if (empty($extra) || empty($extra['ipl/composer'])) {
             return;
         }
 
-        $special = $extra['ipl-composer']['extra'] ?? [];
+        $special = $extra['ipl/composer']['extra'] ?? [];
         foreach ($special as $sourcePath => $targetPath) {
             static::handleCopy($sourcePath, static::TARGET_DIR_NAME . "/" . $targetPath, $copy);
         }
