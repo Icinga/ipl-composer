@@ -1,0 +1,2 @@
+# Exclude Git and CI configuration files from archives.
+.git* export-ignore
