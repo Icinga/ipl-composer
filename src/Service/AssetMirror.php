@@ -8,6 +8,7 @@ use Composer\Util\Filesystem;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 use SplFileInfo;
 use Symfony\Component\Filesystem\Path;
 
@@ -26,12 +27,36 @@ class AssetMirror
 
     protected function getVendorDirectory(): string
     {
-        return $this->composer->getConfig()->get('vendor-dir');
+        $vendor = $this->composer->getConfig()->get('vendor-dir') ?? false;
+        if ($vendor === false) {
+            throw new RuntimeException('Could not determine vendor directory');
+        }
+
+        return $vendor;
+    }
+
+    protected function getCwd(): string
+    {
+        $cwd = getcwd();
+
+        if ($cwd === false) {
+            $cwd = getenv('CWD');
+        }
+
+        if ($cwd === false) {
+            $cwd = $this->composer->getConfig()->get('home') ?? false;
+        }
+
+        if ($cwd === false) {
+            throw new RuntimeException('Could not determine current working directory');
+        }
+
+        return $cwd;
     }
 
     protected function getTargetDirectory(): string
     {
-        return getcwd() . '/' . static::TARGET_DIR_NAME;
+        return $this->getCwd() . '/' . static::TARGET_DIR_NAME;
     }
 
     public function mirror(bool $copy = false): void
@@ -48,7 +73,7 @@ class AssetMirror
 
     protected function getRelativePath(string $path, ?string $base = null): string
     {
-        $base ??= getcwd();
+        $base ??= $this->getCwd();
         $path = Path::canonicalize($path);
         if (! $this->validatePath($path, $base)) {
             return $path;
@@ -76,7 +101,7 @@ class AssetMirror
             ), RecursiveIteratorIterator::SELF_FIRST);
             /** @var SplFileInfo $sourcePath */
             foreach ($libAssets as $sourcePath) {
-                $sourcePath = $sourcePath->getPath() . '/' . $sourcePath->getFilename();
+                $sourcePath = $sourcePath->getPathname();
                 $targetPath = $to . substr($sourcePath, strlen($from));
 
                 if ($sourcePath === $targetPath) {
@@ -186,10 +211,10 @@ class AssetMirror
                 /** @var SplFileInfo $asset */
                 if ($asset->isDir()) {
                     if ($fs->isDirEmpty($asset->getPathname())) {
-                        rmdir($asset);
+                        rmdir($asset->getPathname());
                     }
                 } elseif ($asset->isLink() && ! file_exists($asset->getPathname())) {
-                    unlink($asset);
+                    unlink($asset->getPathname());
                 }
             }
         }
