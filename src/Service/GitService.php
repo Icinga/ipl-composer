@@ -14,7 +14,7 @@ class GitService
 {
     protected Git $git;
 
-    static public function isGitInstalled(): bool
+    public static function isGitInstalled(): bool
     {
         $executor = new ProcessExecutor();
         return Git::getVersion($executor) !== null;

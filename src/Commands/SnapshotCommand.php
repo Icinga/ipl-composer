@@ -27,7 +27,7 @@ class SnapshotCommand extends BaseCommand
         }
         $version = trim($version, 'v');
         $parts = explode('.', $version);
-        $newVersion = join('.', [$parts[0], (int)$parts[1] + 1, 0]);
+        $newVersion = join('.', [$parts[0], (int) $parts[1] + 1, 0]);
         if ($suffix) {
             $newVersion .= '-' . $suffix;
         }

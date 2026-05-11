@@ -44,8 +44,8 @@ class ReleaseCommand extends BaseCommand
         $extra = $this->requireComposer()->getPackage()->getExtra()['ipl/composer']['release'] ?? [];
         return $build->release(
             $version,
-            !$noCheckout,
-            !$noTag,
+            ! $noCheckout,
+            ! $noTag,
             $extra['include'] ?? [],
             $extra['exclude'] ?? [],
         );
