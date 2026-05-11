@@ -48,6 +48,7 @@ class IplComposerPlugin implements PluginInterface, Capable, EventSubscriberInte
         $composer = $event->getComposer();
         $devMode = $event->isDevMode();
         $event->getIO()->write(($devMode ? 'Linking' : 'Copying') . ' asset directory');
-        AssetMirror::mirror($composer, ! $devMode);
+        $mirror = new AssetMirror($composer);
+        $mirror->mirror(! $devMode);
     }
 }

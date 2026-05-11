@@ -29,7 +29,8 @@ class AssetCommand extends BaseCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        AssetMirror::mirror($this->requireComposer(), $input->getOption('copy'));
+        $mirror = new AssetMirror($this->requireComposer());
+        $mirror->mirror($input->getOption('copy'));
 
         return 0;
     }
