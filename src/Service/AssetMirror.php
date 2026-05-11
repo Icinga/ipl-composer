@@ -209,11 +209,11 @@ class AssetMirror
             ), RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($assets as $asset) {
                 /** @var SplFileInfo $asset */
-                if ($asset->isDir()) {
+                if (is_dir($asset->getPathname())) {
                     if ($fs->isDirEmpty($asset->getPathname())) {
                         rmdir($asset->getPathname());
                     }
-                } elseif ($asset->isLink() && ! file_exists($asset->getPathname())) {
+                } elseif (is_link($asset->getPathname()) && ! file_exists($asset->getPathname())) {
                     unlink($asset->getPathname());
                 }
             }
