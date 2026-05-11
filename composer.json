@@ -11,7 +11,6 @@
   "homepage": "https://github.com/Icinga/ipl-composer",
   "require": {
     "php": ">=8.2",
-    "composer/composer": ">=2.8",
     "composer-plugin-api": "^2.0"
   },
   "autoload": {
@@ -22,12 +21,6 @@
   "autoload-dev": {
     "psr-4": {
       "ipl\\Tests\\Composer\\": "tests"
-    }
-  },
-  "config": {
-    "sort-packages": true,
-    "allow-plugins": {
-      "ipl/composer": true
     }
   },
   "extra": {
