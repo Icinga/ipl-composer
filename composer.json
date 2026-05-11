@@ -1,0 +1,29 @@
+{
+  "name": "ipl/composer",
+  "description": "Icinga PHP Library - Composer asset loader plugin",
+  "type": "composer-plugin",
+  "version": "0.1.0",
+  "keywords": [
+    "composer",
+    "asset",
+    "loader"
+  ],
+  "homepage": "https://github.com/Icinga/ipl-composer",
+  "require": {
+    "php": ">=8.2",
+    "composer-plugin-api": "^2.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "ipl\\Composer\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ipl\\Tests\\Composer\\": "tests"
+    }
+  },
+  "extra": {
+    "class": "\\ipl\\Composer\\IplComposerPlugin"
+  }
+}
