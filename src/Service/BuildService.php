@@ -101,7 +101,10 @@ class BuildService
         $absDir = $relDir === '.' ? $cwd : "$cwd/$relDir";
 
         $filter = new RecursiveCallbackFilterIterator(
-            new RecursiveDirectoryIterator($absDir, FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS),
+            new RecursiveDirectoryIterator(
+                $absDir,
+                FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS
+            ),
             function (SplFileInfo $entry) use ($cwd, $includeFiles, $excludeFiles): bool {
                 if (str_starts_with($entry->getFilename(), '.')) {
                     return false;
