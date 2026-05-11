@@ -61,14 +61,14 @@ class AssetMirror
 
     public function mirror(bool $copy = false): void
     {
-        static::handlePackage($this->composer->getPackage(), $copy);
+        $this->handlePackage($this->composer->getPackage(), $copy);
 
         $localRepo = $this->composer->getRepositoryManager()->getLocalRepository();
         foreach ($localRepo->getPackages() as $package) {
-            static::handlePackage($package, $copy);
+            $this->handlePackage($package, $copy);
         }
 
-        static::cleanup();
+        $this->cleanup();
     }
 
     protected function getRelativePath(string $path, ?string $base = null): string
@@ -141,7 +141,7 @@ class AssetMirror
                     }
                 }
             }
-        } else if (is_file($from)) {
+        } elseif (is_file($from)) {
             $targetPath = $this->getTargetDirectory() . '/' . $to;
             if ($from === $targetPath) {
                 return;
@@ -198,7 +198,7 @@ class AssetMirror
         }
     }
 
-    static protected function cleanup(): void
+    protected function cleanup(): void
     {
         // Check for removed files
         if (is_dir(static::TARGET_DIR_NAME)) {
