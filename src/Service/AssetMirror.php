@@ -3,6 +3,7 @@
 namespace ipl\Composer\Service;
 
 use Composer\Composer;
+use Composer\IO\IOInterface;
 use Composer\Package\PackageInterface;
 use Composer\Util\Filesystem;
 use FilesystemIterator;
@@ -21,7 +22,8 @@ class AssetMirror
     protected const TARGET_DIR_NAME = 'asset';
 
     public function __construct(
-        protected Composer $composer
+        protected Composer $composer,
+        protected IOInterface $io,
     ) {
     }
 
@@ -40,7 +42,11 @@ class AssetMirror
         $cwd = getcwd();
 
         if ($cwd === false) {
-            $cwd = getenv('CWD');
+            $cwd = getenv('PWD');
+        }
+
+        if ($cwd === false) {
+            $cwd = $_SERVER['PWD'] ?? false;
         }
 
         if ($cwd === false) {
@@ -61,11 +67,13 @@ class AssetMirror
 
     public function mirror(bool $copy = false): void
     {
-        $this->handlePackage($this->composer->getPackage(), $copy);
+        // Note: There is no need to copy asset files to the exact same location.
+        $this->handleExtraFiles($this->composer->getPackage(), $copy);
 
         $localRepo = $this->composer->getRepositoryManager()->getLocalRepository();
         foreach ($localRepo->getPackages() as $package) {
-            $this->handlePackage($package, $copy);
+            $this->handleAssetDirectory($package, $copy);
+            $this->handleExtraFiles($package, $copy);
         }
 
         $this->cleanup();
@@ -108,10 +116,18 @@ class AssetMirror
                     continue;
                 }
 
-                if ($targetPath != $to && ! $this->validatePath($targetPath, $this->getTargetDirectory())) {
-                    echo(
+                if (! $this->validatePath($sourcePath, $this->getVendorDirectory())) {
+                    $this->io->write(
+                        'Skipping "' . $this->getRelativePath($sourcePath, $this->getVendorDirectory())
+                        . '" because it sources a directory outside the vendor directory',
+                    );
+                    continue;
+                }
+
+                if ($targetPath !== $to && ! $this->validatePath($targetPath, $this->getTargetDirectory())) {
+                    $this->io->write(
                         'Skipping "' . $this->getRelativePath($targetPath, $this->getTargetDirectory())
-                        . '" because it targets a directory outside the assets directory' . PHP_EOL
+                        . '" because it targets a directory outside the assets directory',
                     );
                     continue;
                 }
@@ -122,8 +138,8 @@ class AssetMirror
                     }
                 }
 
-                echo(
-                    $this->getRelativePath($sourcePath) . ' -> ' . $this->getRelativePath($targetPath) . PHP_EOL
+                $this->io->write(
+                    $this->getRelativePath($sourcePath) . ' -> ' . $this->getRelativePath($targetPath)
                 );
 
                 if (is_dir($sourcePath)) {
@@ -142,15 +158,24 @@ class AssetMirror
                 }
             }
         } elseif (is_file($from)) {
+            $sourcePath = Path::canonicalize($from);
             $targetPath = $this->getTargetDirectory() . '/' . $to;
-            if ($from === $targetPath) {
+            if ($sourcePath === $targetPath) {
+                return;
+            }
+
+            if (! $this->validatePath($sourcePath, $this->getVendorDirectory())) {
+                $this->io->write(
+                    'Skipping "' . $this->getRelativePath($sourcePath, $this->getVendorDirectory())
+                    . '" because it sources a directory outside the vendor directory',
+                );
                 return;
             }
 
             if (! $this->validatePath($targetPath, $this->getTargetDirectory())) {
-                echo(
+                $this->io->write(
                     'Skipping "' . $this->getRelativePath($targetPath, $this->getTargetDirectory())
-                    . '" because it targets a directory outside the assets directory' . PHP_EOL
+                    . '" because it targets a directory outside the assets directory',
                 );
                 return;
             }
@@ -159,8 +184,8 @@ class AssetMirror
                 unlink($targetPath);
             }
 
-            echo(
-                $this->getRelativePath($from) . ' -> ' . $this->getRelativePath($targetPath) . PHP_EOL
+            $this->io->write(
+                $this->getRelativePath($sourcePath) . ' -> ' . $this->getRelativePath($targetPath),
             );
 
             if (! is_dir(dirname($targetPath))) {
@@ -168,21 +193,24 @@ class AssetMirror
             }
 
             if ($copy) {
-                copy($from, $targetPath);
+                copy($sourcePath, $targetPath);
             } else {
-                symlink($from, $targetPath);
+                symlink($sourcePath, $targetPath);
             }
         }
     }
 
-    protected function handlePackage(PackageInterface $package, bool $copy): void
+    protected function handleAssetDirectory(PackageInterface $package, bool $copy): void
     {
         $name = $package->getName();
         $path = $this->getVendorDirectory() . "/$name/" . static::SOURCE_DIR_NAME;
         if (is_dir($path) && is_readable($path)) {
-            static::handleCopy($path, $this->getTargetDirectory(), $copy);
+            $this->handleCopy($path, $this->getTargetDirectory(), $copy);
         }
+    }
 
+    protected function handleExtraFiles(PackageInterface $package, bool $copy): void
+    {
         $extra = $package->getExtra();
         if (empty($extra) || empty($extra['ipl/composer'])) {
             return;
@@ -190,7 +218,7 @@ class AssetMirror
 
         $special = $extra['ipl/composer']['extra'] ?? [];
         foreach ($special as $sourcePath => $targetPath) {
-            static::handleCopy(
+            $this->handleCopy(
                 $this->getVendorDirectory() . '/' . $sourcePath,
                 $targetPath,
                 $copy
@@ -201,10 +229,10 @@ class AssetMirror
     protected function cleanup(): void
     {
         // Check for removed files
-        if (is_dir(static::TARGET_DIR_NAME)) {
+        if (is_dir($this->getTargetDirectory())) {
             $fs = new Filesystem();
             $assets = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
-                static::TARGET_DIR_NAME,
+                $this->getTargetDirectory(),
                 FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::SKIP_DOTS
             ), RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($assets as $asset) {

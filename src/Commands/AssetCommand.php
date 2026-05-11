@@ -29,7 +29,7 @@ class AssetCommand extends BaseCommand
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $mirror = new AssetMirror($this->requireComposer());
+        $mirror = new AssetMirror($this->requireComposer(), $this->getIO());
         $mirror->mirror($input->getOption('copy'));
 
         return 0;

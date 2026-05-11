@@ -13,15 +13,15 @@ use ipl\Composer\Service\AssetMirror;
 
 class IplComposerPlugin implements PluginInterface, Capable, EventSubscriberInterface
 {
-    public function activate(Composer $composer, IOInterface $io)
+    public function activate(Composer $composer, IOInterface $io): void
     {
     }
 
-    public function deactivate(Composer $composer, IOInterface $io)
+    public function deactivate(Composer $composer, IOInterface $io): void
     {
     }
 
-    public function uninstall(Composer $composer, IOInterface $io)
+    public function uninstall(Composer $composer, IOInterface $io): void
     {
     }
 
@@ -44,8 +44,9 @@ class IplComposerPlugin implements PluginInterface, Capable, EventSubscriberInte
     {
         $composer = $event->getComposer();
         $devMode = $event->isDevMode();
-        $event->getIO()->write(($devMode ? 'Linking' : 'Copying') . ' asset directory');
-        $mirror = new AssetMirror($composer);
+        $output = $event->getIO();
+        $output->write(($devMode ? 'Linking' : 'Copying') . ' asset directory');
+        $mirror = new AssetMirror($composer, $output);
         $mirror->mirror(! $devMode);
     }
 }
